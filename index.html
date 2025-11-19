@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neon Blocks | 4-Player</title>
+    <title>Neon Blocks | Retro Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -42,25 +42,36 @@
             pointer-events: none;
         }
 
-        /* Main layout */
+        /* Global Background */
+        #bgCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            background-color: rgba(0, 0, 0, 0.8);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        #bgCanvas.visible { opacity: 1; }
+
+        /* Main Layout - 1v1 Style */
         .main-layout {
             display: flex;
             flex-direction: row;
-            align-items: center;
-            gap: 30px;
+            align-items: flex-start;
+            gap: 40px;
+            
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             transform-origin: center center;
-            z-index: 5;
+            
+            z-index: 10;
             width: max-content;
-        }
-
-        .game-wrapper {
-            display: flex;
-            gap: 30px;
-            align-items: flex-start;
         }
 
         .game-container {
@@ -75,30 +86,24 @@
             position: relative;
         }
 
-        /* OPPONENT GRID (Dynamic) */
-        .opponents-wrapper {
-            display: none; /* Hidden until MP starts */
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .opponent-slot {
-            display: flex;
+        /* Opponent View (1v1 Single Board) */
+        .opponent-container {
+            display: none; 
             flex-direction: column;
             align-items: center;
-            padding: 10px;
+            padding: 20px;
             border: 4px solid #333;
             border-radius: 4px;
             background-color: #0a0a0a;
             opacity: 0.9;
-            position: relative;
+            box-shadow: 0 0 30px rgba(255, 0, 85, 0.1);
         }
-
+        
         .opponent-header {
             color: var(--accent-secondary);
-            margin-bottom: 5px;
-            font-size: 10px;
-            text-shadow: 1px 1px #000;
+            margin-bottom: 15px;
+            font-size: 16px;
+            text-shadow: 2px 2px #000;
         }
 
         canvas {
@@ -108,16 +113,7 @@
             box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
         }
 
-        #gameBoard {
-            border-right: 4px solid #222;
-        }
-
-        /* Smaller canvases for opponents */
-        .opp-canvas {
-            border: 2px solid #222;
-            width: 173px; /* Scale down 1/3 or 1/2 depending on space. 520/3 = ~173 */
-            height: 346px; 
-        }
+        #gameBoard { border-right: 4px solid #222; }
 
         .ui-panel {
             display: flex;
@@ -166,7 +162,7 @@
             border-bottom: 2px solid #111;
         }
 
-        /* --- MENU LAYERS --- */
+        /* --- MENUS --- */
         .menu-layer {
             position: absolute;
             top: 0;
@@ -177,14 +173,13 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 20;
+            z-index: 50; 
             opacity: 0;
             visibility: hidden;
             transform: scale(0.95);
             transition: opacity 0.3s, transform 0.3s, visibility 0.3s;
             pointer-events: none;
         }
-
         .menu-layer.active {
             opacity: 1;
             visibility: visible;
@@ -193,7 +188,7 @@
         }
 
         .menu-window {
-            background-color: rgba(10, 10, 10, 0.95);
+            background-color: rgba(10, 10, 10, 0.98);
             border: 4px solid var(--accent-color);
             padding: 40px;
             box-shadow: 0 0 0 100vmax rgba(0,0,0,0.85);
@@ -202,24 +197,7 @@
             align-items: center;
             min-width: 500px;
             position: relative;
-            z-index: 30;
-        }
-        
-        #bgCanvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 15;
-            background-color: rgba(0, 0, 0, 0.8); 
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.5s ease;
-        }
-        
-        #bgCanvas.visible {
-            opacity: 1;
+            z-index: 55;
         }
 
         .debug-info {
@@ -229,7 +207,7 @@
             color: #444;
             width: 100%;
             text-align: center;
-            z-index: 20;
+            z-index: 60;
             pointer-events: none;
         }
 
@@ -254,23 +232,20 @@
             text-transform: uppercase;
             margin: 12px;
             min-width: 280px;
-            transition: transform 0.1s, background-color 0.1s, box-shadow 0.1s;
+            transition: transform 0.1s;
             box-shadow: 6px 6px 0px #000000;
             position: relative;
         }
-
         .btn:hover {
             background: var(--accent-color);
             color: #000;
             transform: translate(-2px, -2px);
             box-shadow: 8px 8px 0px #000, 0 0 15px var(--accent-color);
         }
-
         .btn:active {
             transform: translate(2px, 2px);
             box-shadow: 2px 2px 0px #000;
         }
-        
         .btn:disabled {
             border-color: #444;
             color: #666;
@@ -278,365 +253,141 @@
             box-shadow: none;
         }
 
-        .btn-secondary {
-            border-color: var(--accent-secondary);
-            color: var(--accent-secondary);
-        }
-        .btn-secondary:hover {
-            background: var(--accent-secondary);
-            color: #fff;
-            box-shadow: 8px 8px 0px #000, 0 0 15px var(--accent-secondary);
-        }
+        .btn-secondary { border-color: var(--accent-secondary); color: var(--accent-secondary); }
+        .btn-secondary:hover { background: var(--accent-secondary); color: #fff; box-shadow: 8px 8px 0px #000, 0 0 15px var(--accent-secondary); }
 
-        .input-group {
-            margin: 20px 0;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            align-items: center;
-        }
+        .input-group { margin: 20px 0; display: flex; flex-direction: column; gap: 15px; align-items: center; }
+        input { padding: 15px; font-family: var(--font-main); background: #222; border: 4px solid #555; color: #fff; font-size: 16px; text-align: center; width: 250px; outline: none; text-transform: uppercase; }
+        input:focus { border-color: var(--accent-color); }
+        .status-msg { margin-top: 25px; color: #aaa; font-size: 10px; min-height: 25px; }
+        .room-code-display { font-size: 32px; color: #fff; background: #000; padding: 20px; border: 4px dashed #666; margin: 25px 0; letter-spacing: 4px; }
         
-        input {
-            padding: 15px;
-            font-family: var(--font-main);
-            background: #222;
-            border: 4px solid #555;
-            color: #fff;
-            font-size: 16px;
-            text-align: center;
-            text-transform: uppercase;
-            width: 250px;
-            outline: none;
-        }
-        input:focus {
-            border-color: var(--accent-color);
-        }
+        .menu-header { font-size: 24px; color: #fff; margin-bottom: 30px; text-shadow: 3px 3px 0 var(--accent-secondary); text-align: center; width: 100%; border-bottom: 4px solid var(--accent-secondary); padding-bottom: 10px; }
 
-        .status-msg {
-            margin-top: 25px;
-            color: #aaa;
-            font-size: 10px;
-            min-height: 25px;
-        }
-
-        .room-code-display {
-            font-size: 32px;
-            color: #fff;
-            background: #000;
-            padding: 20px;
-            border: 4px dashed #666;
-            margin: 25px 0;
-            letter-spacing: 4px;
-            text-shadow: 2px 2px 0 #333;
-        }
-
-        /* Lobby Player List */
-        .player-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            width: 100%;
-            margin: 20px 0;
-        }
-
-        .player-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 15px;
-            background: #1a1a1a;
-            border: 2px solid #333;
-            font-size: 12px;
-        }
-        
-        .player-item.ready {
-            border-color: var(--accent-color);
-            color: var(--accent-color);
-        }
-        
-        .player-item.not-ready {
-            border-color: #444;
-            color: #666;
-        }
-
-        .status-pill {
-            font-size: 8px;
-            padding: 4px 8px;
-            background: #333;
-            color: #fff;
-        }
-        .player-item.ready .status-pill { background: var(--accent-color); color: #000; }
-
-        /* Menu Headers */
-        .menu-header {
-            font-size: 24px;
-            color: #fff;
-            margin-bottom: 30px;
-            text-shadow: 3px 3px 0 var(--accent-secondary);
-            text-align: center;
-            width: 100%;
-            border-bottom: 4px solid var(--accent-secondary);
-            padding-bottom: 10px;
-        }
-
-        /* Slider Styling */
-        .slider {
-            -webkit-appearance: none;
-            width: 100%;
-            max-width: 300px;
-            height: 12px;
-            background: #333;
-            outline: none;
-            border: 2px solid #555;
-            margin: 15px 0;
-            box-shadow: 4px 4px 0 #000;
-        }
+        /* Slider */
+        .slider { -webkit-appearance: none; width: 100%; max-width: 300px; height: 12px; background: #333; outline: none; border: 2px solid #555; margin: 15px 0; box-shadow: 4px 4px 0 #000; }
         .slider::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; background: var(--accent-color); cursor: pointer; border: 2px solid #fff; box-shadow: 2px 2px 0 #000; }
-        .slider::-moz-range-thumb { width: 24px; height: 24px; background: var(--accent-color); cursor: pointer; border: 2px solid #fff; box-shadow: 2px 2px 0 #000; }
-
-        /* --- CHAT BOX STYLES --- */
-        .chat-container {
-            display: none; /* Hidden by default */
-            width: 300px; /* Fixed sidebar width */
-            height: 1088px; /* Fixed height to match Game Container */
-            background: #0a0a0a;
-            border: 4px solid #333;
-            border-radius: 4px;
-            margin-top: 0; 
-            flex-direction: column;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-        }
-
-        .chat-header {
-            background: #111;
-            color: #888;
-            padding: 15px;
-            text-align: center;
-            font-size: 12px;
-            border-bottom: 4px solid #333;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .chat-messages {
-            flex: 1; /* Grow to fill height */
-            overflow-y: auto;
-            padding: 15px;
-            border-bottom: 4px solid #333;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            font-size: 10px;
-            background: #000;
-        }
-        
-        /* Custom Scrollbar for chat */
-        .chat-messages::-webkit-scrollbar { width: 8px; }
-        .chat-messages::-webkit-scrollbar-track { background: #111; }
-        .chat-messages::-webkit-scrollbar-thumb { background: #444; }
-
-        .chat-msg {
-            word-break: break-word;
-            line-height: 1.6;
-            font-family: var(--font-main);
-        }
-        
-        /* Player 1 (Host) = Blue/Cyan */
-        .chat-msg.p1 .sender { color: var(--accent-color); text-shadow: 0 0 5px rgba(0, 255, 204, 0.5); }
-        .chat-msg.p2 .sender { color: var(--accent-secondary); text-shadow: 0 0 5px rgba(255, 0, 85, 0.5); }
-        .chat-msg.p3 .sender { color: #ffcc00; text-shadow: 0 0 5px rgba(255, 204, 0, 0.5); }
-        .chat-msg.p4 .sender { color: #cc00ff; text-shadow: 0 0 5px rgba(204, 0, 255, 0.5); }
-        
-        .chat-msg .sender { font-weight: bold; margin-right: 5px; display: inline-block; }
-        .chat-msg .content { color: #ddd; }
-
-        .chat-input-area {
-            display: flex;
-            padding: 0;
-            background: #111;
-            height: 60px;
-        }
-
-        #chatInput {
-            flex: 1;
-            background: #000;
-            border: none;
-            padding: 15px;
-            color: #fff;
-            font-family: var(--font-main);
-            font-size: 12px;
-            text-transform: none; /* Allow normal casing */
-            text-align: left;
-            width: auto;
-            user-select: text; /* Allow selection/typing */
-        }
-        #chatInput:focus {
-            outline: 4px solid var(--accent-color);
-            outline-offset: -4px;
-        }
-
-        #chatSendBtn {
-            background: #222;
-            color: #fff;
-            border: none;
-            border-left: 4px solid #333;
-            padding: 0 20px;
-            font-family: var(--font-main);
-            font-size: 12px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        #chatSendBtn:hover {
-            background: var(--accent-color);
-            color: #000;
-        }
-
-        @media (max-width: 1200px) {
-            .main-layout {
-                /* Scale removed, relying on JS auto-scale now */
-            }
-        }
     </style>
 </head>
 <body class="crt-enabled"> 
 
+    <canvas id="bgCanvas"></canvas> 
+
     <div class="main-layout">
-        <canvas id="bgCanvas"></canvas> 
+        <!-- Player 1 Container -->
+        <div class="game-container">
+            <canvas id="gameBoard" width="520" height="1040"></canvas>
 
-        <div class="game-wrapper">
-            <div class="game-container">
-                <canvas id="gameBoard" width="520" height="1040"></canvas>
-
-                <!-- Side UI -->
-                <div class="ui-panel">
-                    <div class="stat-box">
-                        <div class="stat-label">Score</div>
-                        <div class="stat-value" id="score">0</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-label">Hold</div>
-                        <canvas id="holdPiece" width="150" height="150"></canvas>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-label">Level</div>
-                        <div class="stat-value" id="level">1</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-label">Next</div>
-                        <canvas id="nextPiece" width="150" height="150"></canvas>
-                    </div>
-                    <div class="controls-hint">
-                        <div><span class="key">W</span> <span class="key">↑</span> ROTATE</div>
-                        <div><span class="key">A</span> <span class="key">←</span> LEFT</div>
-                        <div><span class="key">S</span> <span class="key">↓</span> DROP</div>
-                        <div><span class="key">D</span> <span class="key">→</span> RIGHT</div>
-                        <div><span class="key">SPC</span> HARD DROP</div>
-                        <div><span class="key">R</span> HOLD</div>
-                        <div><span class="key">P</span> PAUSE</div>
-                        <div><span class="key">ESC</span> MENU</div>
-                    </div>
+            <div class="ui-panel">
+                <div class="stat-box">
+                    <div class="stat-label">Score</div>
+                    <div class="stat-value" id="score">0</div>
                 </div>
-
-                <!-- Start Overlay -->
-                <div id="overlay" class="menu-layer active">
-                    <h1 id="overlayTitle">NEON<br>BLOCKS</h1>
-                    <button id="resumeBtn" class="btn" style="display: none; border-color: #fff; color: #fff;">RESUME</button>
-                    <button id="startBtn" class="btn">SINGLE PLAYER</button>
-                    <button id="disconnectBtn" class="btn btn-secondary" style="display: none; border-color: #ff4444; color: #ff4444;">DISCONNECT</button>
-                    <button id="mpBtn" class="btn">MULTIPLAYER</button>
-                    <button id="optionsBtn" class="btn" style="border-color: #00ccff; color: #00ccff;">OPTIONS</button>
-                    <button id="aboutBtn" class="btn btn-secondary">ABOUT</button>
+                <div class="stat-box">
+                    <div class="stat-label">Hold</div>
+                    <canvas id="holdPiece" width="150" height="150"></canvas>
                 </div>
-
-                <!-- Options Menu -->
-                <div id="optionsMenu" class="menu-layer">
-                    <div class="menu-window">
-                        <div class="menu-header">OPTIONS</div>
-                        <div class="stat-label" style="margin-bottom: 15px; font-size: 12px;">RESOLUTION</div>
-                        <button class="btn res-btn" onclick="setResolution(720)">720p</button>
-                        <button class="btn res-btn" onclick="setResolution(1080)">1080p</button>
-                        <button class="btn res-btn" onclick="setResolution(1440)">1440p</button>
-                        <div class="stat-label" style="margin-top: 30px; margin-bottom: 15px; font-size: 12px;">AUDIO & VISUALS</div>
-                        <button id="musicToggleBtn" class="btn" style="border-color: #00ffcc; color: #00ffcc;">MUSIC: ON</button>
-                        <button id="crtToggleBtn" class="btn" style="border-color: #00ffcc; color: #00ffcc;">CRT EFFECT: ON</button>
-                        <button id="fsToggleBtn" class="btn" style="border-color: #00ffcc; color: #00ffcc;">FULLSCREEN: OFF</button>
-                        <div class="stat-label" style="margin-top: 20px; font-size: 12px;">VOLUME <span id="volumeValue">50%</span></div>
-                        <input type="range" id="volumeSlider" min="0" max="100" value="50" class="slider">
-                        <button id="optionsBackBtn" class="btn btn-secondary" style="margin-top: 30px;">BACK</button>
-                    </div>
+                <div class="stat-box">
+                    <div class="stat-label">Level</div>
+                    <div class="stat-value" id="level">1</div>
                 </div>
-
-                <!-- About Menu -->
-                <div id="aboutMenu" class="menu-layer">
-                    <div class="menu-window">
-                        <div class="menu-header">SYSTEM INFO</div>
-                        <div class="stat-box" style="width: 100%; margin-bottom: 15px;">
-                            <div class="stat-label">App ID</div>
-                            <div id="aboutAppId" style="font-size: 10px; word-break: break-all; color: #fff; line-height: 1.5;">Loading...</div>
-                        </div>
-                        <div class="stat-box" style="width: 100%; margin-bottom: 15px;">
-                            <div class="stat-label">User ID</div>
-                            <div id="aboutUserId" style="font-size: 10px; word-break: break-all; color: #fff; line-height: 1.5;">Not Logged In</div>
-                        </div>
-                        <button id="aboutBackBtn" class="btn btn-secondary">BACK</button>
-                    </div>
+                <div class="stat-box">
+                    <div class="stat-label">Next</div>
+                    <canvas id="nextPiece" width="150" height="150"></canvas>
                 </div>
-
-                <!-- Multiplayer Menu -->
-                <div id="mpMenu" class="menu-layer">
-                    <div class="menu-window">
-                        <div class="menu-header">MULTIPLAYER</div>
-                        
-                        <div id="mpOptions">
-                            <button id="hostBtn" class="btn">HOST GAME</button>
-                            <div class="input-group">
-                                <div class="stat-label" style="margin-bottom: 0;">OR JOIN GAME</div>
-                                <input type="text" id="joinCodeInput" placeholder="CODE" maxlength="6">
-                                <button id="joinBtn" class="btn">JOIN</button>
-                            </div>
-                            <button id="backBtn" class="btn btn-secondary">BACK</button>
-                        </div>
-
-                        <!-- NEW LOBBY SYSTEM -->
-                        <div id="mpLobby" style="display:none; text-align: center; width: 100%;">
-                            <div class="stat-label">ROOM CODE</div>
-                            <div id="roomCodeDisplay" class="room-code-display">...</div>
-                            
-                            <div class="status-msg" id="lobbyStatus">CONNECTING...</div>
-                            
-                            <div class="stat-label" style="margin-top: 20px;">CONNECTED PLAYERS</div>
-                            <div id="lobbyPlayerList" class="player-list">
-                                <!-- Dynamic List -->
-                            </div>
-                            
-                            <div id="lobbyControls">
-                                <button id="readyBtn" class="btn" style="border-color: #ff0; color: #ff0;">NOT READY</button>
-                                <button id="startGameBtn" class="btn" style="border-color: #0f0; color: #0f0; display:none;" disabled>START GAME</button>
-                            </div>
-
-                            <button id="cancelHostBtn" class="btn btn-secondary" style="margin-top: 20px;">LEAVE LOBBY</button>
-                        </div>
-                        
-                        <div class="status-msg" id="mpStatus"></div>
-                    </div>
+                <div class="controls-hint">
+                    <div><span class="key">W</span> <span class="key">↑</span> ROTATE</div>
+                    <div><span class="key">A</span> <span class="key">←</span> LEFT</div>
+                    <div><span class="key">S</span> <span class="key">↓</span> DROP</div>
+                    <div><span class="key">D</span> <span class="key">→</span> RIGHT</div>
+                    <div><span class="key">SPC</span> HARD DROP</div>
+                    <div><span class="key">R</span> HOLD</div>
+                    <div><span class="key">P</span> PAUSE</div>
+                    <div><span class="key">ESC</span> MENU</div>
                 </div>
-                
-                <div class="debug-info" id="debugInfo">Initializing System...</div>
             </div>
 
-            <!-- OPPONENT GRID (Dynamic for 4 Players) -->
-            <div class="opponents-wrapper" id="opponentContainer">
-                 <!-- Opponent Slots generated via JS -->
+            <!-- Start Overlay -->
+            <div id="overlay" class="menu-layer active">
+                <h1 id="overlayTitle">NEON<br>BLOCKS</h1>
+                <button id="resumeBtn" class="btn" style="display: none; border-color: #fff; color: #fff;">RESUME</button>
+                <button id="startBtn" class="btn">SINGLE PLAYER</button>
+                <button id="disconnectBtn" class="btn btn-secondary" style="display: none; border-color: #ff4444; color: #ff4444;">DISCONNECT</button>
+                <button id="mpBtn" class="btn">MULTIPLAYER</button>
+                <button id="optionsBtn" class="btn" style="border-color: #00ccff; color: #00ccff;">OPTIONS</button>
+                <button id="aboutBtn" class="btn btn-secondary">ABOUT</button>
             </div>
+
+            <!-- Options Menu -->
+            <div id="optionsMenu" class="menu-layer">
+                <div class="menu-window">
+                    <div class="menu-header">OPTIONS</div>
+                    <div class="stat-label" style="margin-bottom: 15px; font-size: 12px;">RESOLUTION</div>
+                    <button class="btn res-btn" onclick="setResolution(720)">720p</button>
+                    <button class="btn res-btn" onclick="setResolution(1080)">1080p</button>
+                    <button class="btn res-btn" onclick="setResolution(1440)">1440p</button>
+                    <div class="stat-label" style="margin-top: 30px; margin-bottom: 15px; font-size: 12px;">AUDIO & VISUALS</div>
+                    <button id="musicToggleBtn" class="btn" style="border-color: #00ffcc; color: #00ffcc;">MUSIC: ON</button>
+                    <button id="crtToggleBtn" class="btn" style="border-color: #00ffcc; color: #00ffcc;">CRT EFFECT: ON</button>
+                    <button id="fsToggleBtn" class="btn" style="border-color: #00ffcc; color: #00ffcc;">FULLSCREEN: OFF</button>
+                    <div class="stat-label" style="margin-top: 20px; font-size: 12px;">VOLUME <span id="volumeValue">50%</span></div>
+                    <input type="range" id="volumeSlider" min="0" max="100" value="50" class="slider">
+                    <button id="optionsBackBtn" class="btn btn-secondary" style="margin-top: 30px;">BACK</button>
+                </div>
+            </div>
+
+            <!-- About Menu -->
+            <div id="aboutMenu" class="menu-layer">
+                <div class="menu-window">
+                    <div class="menu-header">SYSTEM INFO</div>
+                    <div class="stat-box" style="width: 100%; margin-bottom: 15px;">
+                        <div class="stat-label">App ID</div>
+                        <div id="aboutAppId" style="font-size: 10px; word-break: break-all; color: #fff; line-height: 1.5;">Loading...</div>
+                    </div>
+                    <div class="stat-box" style="width: 100%; margin-bottom: 15px;">
+                        <div class="stat-label">User ID</div>
+                        <div id="aboutUserId" style="font-size: 10px; word-break: break-all; color: #fff; line-height: 1.5;">Not Logged In</div>
+                    </div>
+                    <button id="aboutBackBtn" class="btn btn-secondary">BACK</button>
+                </div>
+            </div>
+
+            <!-- Multiplayer Menu (1v1 Simple) -->
+            <div id="mpMenu" class="menu-layer">
+                <div class="menu-window">
+                    <div class="menu-header">MULTIPLAYER</div>
+                    
+                    <div id="mpOptions">
+                        <button id="hostBtn" class="btn">HOST GAME</button>
+                        <div class="input-group">
+                            <div class="stat-label" style="margin-bottom: 0;">OR JOIN GAME</div>
+                            <input type="text" id="joinCodeInput" placeholder="CODE" maxlength="6">
+                            <button id="joinBtn" class="btn">JOIN</button>
+                        </div>
+                        <button id="backBtn" class="btn btn-secondary">BACK</button>
+                    </div>
+
+                    <div id="mpLobby" style="display:none; text-align: center; width: 100%;">
+                        <div class="stat-label">ROOM CODE</div>
+                        <div id="roomCodeDisplay" class="room-code-display">...</div>
+                        <div class="status-msg" id="lobbyStatus">CONNECTING...</div>
+                        <button id="cancelHostBtn" class="btn btn-secondary" style="margin-top: 20px;">CANCEL</button>
+                    </div>
+                    
+                    <div class="status-msg" id="mpStatus"></div>
+                </div>
+            </div>
+            
+            <div class="debug-info" id="debugInfo">Initializing System...</div>
         </div>
 
-        <!-- CHAT UI -->
-        <div id="mpChat" class="chat-container">
-            <div class="chat-header">COMMUNICATIONS</div>
-            <div id="chatMessages" class="chat-messages"></div>
-            <div class="chat-input-area">
-                <input type="text" id="chatInput" placeholder="MESSAGE..." maxlength="50" autocomplete="off">
-                <button id="chatSendBtn">SEND</button>
+        <!-- Opponent View (1v1 Single Board) -->
+        <div class="opponent-container" id="opponentContainer">
+            <div class="opponent-header">OPPONENT</div>
+            <canvas id="opponentBoard" width="520" height="1040"></canvas>
+            <div class="stat-box" style="margin-top: 15px; width: 100%; box-sizing: border-box;">
+                <div class="stat-label">ENEMY SCORE</div>
+                <div class="stat-value" id="oppScore" style="color: var(--opponent-color)">0</div>
             </div>
         </div>
     </div>
@@ -654,14 +405,12 @@
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'neon-blocks';
 
         let currentUser = null;
+        // NOTE: Reverted to simple Account ID binding. Requires separate browsers/profiles to test MP.
         let currentGameId = null;
         let isHost = false;
-        let isReady = false; // Lobby Ready Status
         
-        // Listeners
         let gameSessionUnsubscribe = null;
-        let chatUnsubscribe = null;
-        let opponentListeners = []; // Array of unsub functions
+        let opponentUnsubscribe = null;
 
         const initAuth = async () => {
             if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
@@ -697,6 +446,9 @@
         const NEXT_CTX = NEXT_CANVAS.getContext('2d');
         const HOLD_CANVAS = document.getElementById('holdPiece');
         const HOLD_CTX = HOLD_CANVAS.getContext('2d');
+        
+        const OPP_CANVAS = document.getElementById('opponentBoard');
+        const OPP_CTX = OPP_CANVAS.getContext('2d');
 
         const COLORS = [null, '#FF0D72', '#0DC2FF', '#0DFF72', '#F538FF', '#FF8E0D', '#FFE138', '#3877FF', '#808080'];
         const PIECES = [null, [[0,1,0],[1,1,1],[0,0,0]], [[0,2,0,0],[0,2,0,0],[0,2,0,0],[0,2,0,0]], [[0,3,3],[3,3,0],[0,0,0]], [[4,4,0],[0,4,4],[0,0,0]], [[0,0,5],[5,5,5],[0,0,0]], [[6,6],[6,6]], [[7,0,0],[7,7,7],[0,0,0]]];
@@ -719,11 +471,9 @@
         let lastSyncTime = 0;
         let lastAttackTime = 0; 
         let lastReceivedAttackTime = 0; 
-        
-        // Map of Opponents: UID -> { grid, score, active: {matrix, pos} }
-        let opponents = {}; 
+        let opponentState = { grid: createGrid(COLS, ROWS), score: 0, active: null };
 
-        // --- AUDIO (Same as before) ---
+        // --- AUDIO ---
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx = new AudioContext();
         let musicEnabled = true; let crtEnabled = true; let masterVolume = 0.5;
@@ -777,38 +527,12 @@
             if (isAnimating && clearingRows.length > 0) { CTX.fillStyle = `rgba(255, 255, 255, ${Math.sin(Date.now() / 20) * 0.5 + 0.5})`; clearingRows.forEach(y => CTX.fillRect(0, y * BLOCK_SIZE, CANVAS.width, BLOCK_SIZE)); }
             if (!isAnimating && !isGameOver) { drawMatrix(player.matrix, player.pos, CTX); const ghostPos = { ...player.pos }; while (!collide(grid, { matrix: player.matrix, pos: ghostPos })) ghostPos.y++; ghostPos.y--; CTX.globalAlpha = 0.2; drawMatrix(player.matrix, ghostPos, CTX); CTX.globalAlpha = 1.0; }
 
-            // Opponents
+            // Opponent (Single)
             if (isMultiplayer) {
-                const oppContainer = document.getElementById('opponentContainer');
-                const canvases = oppContainer.querySelectorAll('.opp-canvas');
-                const oppIds = Object.keys(opponents);
-                
-                canvases.forEach((canvas, index) => {
-                    const ctx = canvas.getContext('2d');
-                    ctx.fillStyle = '#050505';
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    
-                    if (index < oppIds.length) {
-                        const oppId = oppIds[index];
-                        const oppData = opponents[oppId];
-                        const scale = canvas.width / (COLS * BLOCK_SIZE);
-                        ctx.save();
-                        ctx.scale(scale, scale);
-                        drawGridLines(ctx, COLS * BLOCK_SIZE, ROWS * BLOCK_SIZE);
-                        if (oppData.grid) drawMatrix(oppData.grid, {x: 0, y: 0}, ctx, true);
-                        if (oppData.active) {
-                             ctx.globalAlpha = 0.6;
-                             drawMatrix(oppData.active.matrix, oppData.active.pos, ctx, true);
-                             ctx.globalAlpha = 1.0;
-                        }
-                        ctx.restore();
-                    } else {
-                        ctx.fillStyle = '#333';
-                        ctx.font = '10px "Press Start 2P"';
-                        ctx.textAlign = 'center';
-                        ctx.fillText("EMPTY", canvas.width/2, canvas.height/2);
-                    }
-                });
+                OPP_CTX.fillStyle = '#050505'; OPP_CTX.fillRect(0, 0, OPP_CANVAS.width, OPP_CANVAS.height);
+                drawGridLines(OPP_CTX, OPP_CANVAS.width, OPP_CANVAS.height);
+                if (opponentState.grid) drawMatrix(opponentState.grid, {x: 0, y: 0}, OPP_CTX, true);
+                if (opponentState.active) { OPP_CTX.globalAlpha = 0.6; drawMatrix(opponentState.active.matrix, opponentState.active.pos, OPP_CTX, true); OPP_CTX.globalAlpha = 1.0; }
             }
 
             drawPiecePreview(HOLD_CTX, holdPieceMatrix, HOLD_CANVAS);
@@ -818,7 +542,7 @@
         function drawGridLines(ctx, w, h) { ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 1; for(let i = 0; i <= COLS; i++) { ctx.beginPath(); ctx.moveTo(i * BLOCK_SIZE, 0); ctx.lineTo(i * BLOCK_SIZE, h); ctx.stroke(); } for(let i = 0; i <= ROWS; i++) { ctx.beginPath(); ctx.moveTo(0, i * BLOCK_SIZE); ctx.lineTo(w, i * BLOCK_SIZE); ctx.stroke(); } }
         function drawPiecePreview(ctx, m, c) { ctx.fillStyle = '#1a1a1a'; ctx.fillRect(0, 0, c.width, c.height); if (m) { const ox = (4 - m[0].length) / 2; const oy = (4 - m.length) / 2; ctx.save(); ctx.scale(0.6, 0.6); drawMatrix(m, {x: ox + 0.5, y: oy + 0.5}, ctx); ctx.restore(); } }
 
-        // --- MULTIPLAYER LOGIC ---
+        // --- MULTIPLAYER LOGIC (1v1 Reverted) ---
         const generateCode = () => Math.floor(100000 + Math.random() * 900000).toString();
 
         async function syncMultiplayerState(force = false) {
@@ -828,216 +552,77 @@
             try {
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'gamestates', currentUser.uid), {
                     grid: JSON.stringify(grid), score: player.score, lastAttackTime: lastAttackTime,
-                    active: { matrix: JSON.stringify(player.matrix), pos: player.pos }, timestamp: now,
-                    sessionId: currentGameId
+                    active: { matrix: JSON.stringify(player.matrix), pos: player.pos }, timestamp: now
                 });
                 lastSyncTime = now;
             } catch (e) { console.error(e); }
         }
 
-        // HOST
         async function hostGame() {
             if (!currentUser) return;
             document.getElementById('mpOptions').style.display = 'none';
             document.getElementById('mpLobby').style.display = 'block';
             document.getElementById('roomCodeDisplay').innerText = "LOADING...";
-            document.getElementById('mpStatus').innerText = ""; // Clear status
-            
             const code = generateCode();
-            currentGameId = code; isHost = true; isReady = false;
-            updateReadyBtn();
-
+            const sessionRef = doc(db, 'artifacts', appId, 'public', 'data', 'sessions', code);
             try {
-                const sessionRef = doc(db, 'artifacts', appId, 'public', 'data', 'sessions', code);
-                const initialPlayers = {};
-                initialPlayers[currentUser.uid] = { name: "P1 (HOST)", ready: false, joinedAt: Date.now() };
-
-                await setDoc(sessionRef, {
-                    host: currentUser.uid, code: code, status: 'waiting',
-                    players: initialPlayers, timestamp: Date.now(), messages: []
-                });
-
+                await setDoc(sessionRef, { host: currentUser.uid, code: code, status: 'waiting', timestamp: Date.now() });
                 document.getElementById('roomCodeDisplay').innerText = code;
-                document.getElementById('lobbyStatus').innerText = "WAITING FOR PLAYERS...";
-                if(isHost) document.getElementById('startGameBtn').style.display = 'inline-block';
-
-                setupLobbyListener();
-
+                document.getElementById('lobbyStatus').innerText = "WAITING FOR PLAYER...";
+                currentGameId = code; isHost = true;
+                gameSessionUnsubscribe = onSnapshot(sessionRef, (snap) => {
+                    const data = snap.data();
+                    if (data && data.guest) startMultiplayerGame(data.guest);
+                });
             } catch (e) { console.error(e); document.getElementById('mpStatus').innerText = "Error: " + e.message; }
         }
 
-        // JOIN
         async function joinGame() {
             if (!currentUser) return;
             const code = document.getElementById('joinCodeInput').value.trim();
             if (code.length !== 6) { document.getElementById('mpStatus').innerText = "INVALID CODE"; return; }
-            
             document.getElementById('mpStatus').innerText = "SEARCHING...";
             const sessionRef = doc(db, 'artifacts', appId, 'public', 'data', 'sessions', code);
-            
             try {
                 const docSnap = await getDoc(sessionRef);
                 if (!docSnap.exists()) { document.getElementById('mpStatus').innerText = "ROOM NOT FOUND"; return; }
                 const data = docSnap.data();
-                
                 if (data.status !== 'waiting') { document.getElementById('mpStatus').innerText = "GAME IN PROGRESS"; return; }
-
-                // CHECK IF ALREADY IN (Fix for "Only shows P2" bug)
-                if (data.players && data.players[currentUser.uid]) {
-                    // Already in, just restore session
-                    currentGameId = code;
-                    isHost = (data.host === currentUser.uid);
-                    isReady = data.players[currentUser.uid].ready;
-                } else {
-                    // New player
-                    const playerCount = Object.keys(data.players || {}).length;
-                    if (playerCount >= 4) { document.getElementById('mpStatus').innerText = "ROOM FULL"; return; }
-                    
-                    const newPlayerKey = `players.${currentUser.uid}`;
-                    const pNum = playerCount + 1;
-                    await updateDoc(sessionRef, {
-                        [newPlayerKey]: { name: `P${pNum} (GUEST)`, ready: false, joinedAt: Date.now() }
-                    });
-                    currentGameId = code; isHost = false; isReady = false;
-                }
-
-                // UI Success State
-                document.getElementById('mpStatus').innerText = "";
-                updateReadyBtn();
-                
-                document.getElementById('mpOptions').style.display = 'none';
-                document.getElementById('mpLobby').style.display = 'block';
-                document.getElementById('roomCodeDisplay').innerText = code;
-                
-                // FIX: Explicitly set status text so it doesn't stay stuck on "CONNECTING..."
-                document.getElementById('lobbyStatus').innerText = isHost ? "WAITING FOR PLAYERS..." : "CONNECTED! WAITING FOR HOST...";
-                
-                document.getElementById('startGameBtn').style.display = isHost ? 'inline-block' : 'none';
-
-                setupLobbyListener();
-
+                await setDoc(sessionRef, { ...data, guest: currentUser.uid, status: 'playing' });
+                currentGameId = code; isHost = false;
+                startMultiplayerGame(data.host);
             } catch (e) { console.error(e); document.getElementById('mpStatus').innerText = "Join Error: " + e.message; }
         }
 
-        function setupLobbyListener() {
-            if(!currentGameId) return;
-            const sessionRef = doc(db, 'artifacts', appId, 'public', 'data', 'sessions', currentGameId);
-            
-            gameSessionUnsubscribe = onSnapshot(sessionRef, (snap) => {
-                if(!snap.exists()) return;
-                const data = snap.data();
-                
-                // Render Player List
-                const list = document.getElementById('lobbyPlayerList');
-                list.innerHTML = '';
-                const players = data.players || {};
-                const uids = Object.keys(players);
-                
-                let allReady = true;
-                
-                uids.forEach(uid => {
-                    const p = players[uid];
-                    const div = document.createElement('div');
-                    const isMe = uid === currentUser.uid;
-                    div.className = `player-item ${p.ready ? 'ready' : 'not-ready'}`;
-                    div.innerHTML = `<span>${p.name || 'PLAYER'} ${isMe ? '(YOU)' : ''}</span><span class="status-pill">${p.ready ? 'READY' : 'WAITING'}</span>`;
-                    list.appendChild(div);
-                    if(!p.ready) allReady = false;
-                });
-
-                if(isHost) {
-                    const startBtn = document.getElementById('startGameBtn');
-                    startBtn.disabled = !allReady || uids.length < 2; 
-                    startBtn.style.opacity = startBtn.disabled ? 0.5 : 1;
-                }
-
-                // Check for Game Start
-                if(data.status === 'playing' && !isMultiplayer) {
-                    startMultiplayerMatch(uids);
-                }
-            });
-        }
-
-        async function toggleReady() {
-            if(!currentGameId || !currentUser) return;
-            isReady = !isReady;
-            updateReadyBtn();
-            
-            const sessionRef = doc(db, 'artifacts', appId, 'public', 'data', 'sessions', currentGameId);
-            const playerReadyKey = `players.${currentUser.uid}.ready`;
-            await updateDoc(sessionRef, { [playerReadyKey]: isReady });
-        }
-
-        async function tryStartGame() {
-            if(!isHost || !currentGameId) return;
-            const sessionRef = doc(db, 'artifacts', appId, 'public', 'data', 'sessions', currentGameId);
-            await updateDoc(sessionRef, { status: 'playing' });
-        }
-
-        function updateReadyBtn() {
-            const btn = document.getElementById('readyBtn');
-            if(isReady) {
-                btn.innerText = "READY!";
-                btn.style.borderColor = "#0f0"; btn.style.color = "#0f0";
-            } else {
-                btn.innerText = "NOT READY";
-                btn.style.borderColor = "#ff0"; btn.style.color = "#ff0";
-            }
-        }
-
-        function startMultiplayerMatch(playerUids) {
+        function startMultiplayerGame(opponentUid) {
             isMultiplayer = true;
             lastReceivedAttackTime = 0;
-            
+            if (gameSessionUnsubscribe) gameSessionUnsubscribe();
             hideAllMenus();
             document.getElementById('opponentContainer').style.display = 'flex';
-            document.getElementById('mpChat').style.display = 'flex';
-            document.getElementById('chatMessages').innerHTML = '';
             
-            const oppContainer = document.getElementById('opponentContainer');
-            oppContainer.innerHTML = ''; 
-            opponents = {}; 
-
-            const otherUids = playerUids.filter(uid => uid !== currentUser.uid);
+            // Trigger resize to fit both boards
+            resizeGame();
             
-            otherUids.forEach((uid, idx) => {
-                const slot = document.createElement('div');
-                slot.className = 'opponent-slot';
-                slot.innerHTML = `<div class="opponent-header">P${idx + 2}</div><canvas class="opp-canvas" width="173" height="346"></canvas>`;
-                oppContainer.appendChild(slot);
-                
-                opponents[uid] = { grid: null, score: 0, active: null };
-                
-                const ref = doc(db, 'artifacts', appId, 'public', 'data', 'gamestates', uid);
-                const unsub = onSnapshot(ref, (s) => {
-                    if(s.exists()) {
-                        const d = s.data();
-                        if(d.sessionId === currentGameId) {
-                            opponents[uid].grid = JSON.parse(d.grid);
-                            opponents[uid].active = d.active ? { matrix: JSON.parse(d.active.matrix), pos: d.active.pos } : null;
-                            
-                            if (d.lastAttackTime && d.lastAttackTime > lastReceivedAttackTime) {
-                                if (lastReceivedAttackTime !== 0) addGarbageRow();
-                                lastReceivedAttackTime = d.lastAttackTime;
-                            }
-                            if (lastReceivedAttackTime === 0 && d.lastAttackTime) lastReceivedAttackTime = d.lastAttackTime;
-                        }
+            const opponentStateRef = doc(db, 'artifacts', appId, 'public', 'data', 'gamestates', opponentUid);
+            opponentUnsubscribe = onSnapshot(opponentStateRef, (snap) => {
+                if (snap.exists()) {
+                    const data = snap.data();
+                    if (data.grid) opponentState.grid = JSON.parse(data.grid);
+                    opponentState.score = data.score || 0;
+                    if (data.active) opponentState.active = { matrix: JSON.parse(data.active.matrix), pos: data.active.pos };
+                    document.getElementById('oppScore').innerText = opponentState.score;
+                    if (data.lastAttackTime && data.lastAttackTime > lastReceivedAttackTime) {
+                        if (lastReceivedAttackTime !== 0) addGarbageRow();
+                        lastReceivedAttackTime = data.lastAttackTime;
                     }
-                });
-                opponentListeners.push(unsub);
+                    if (lastReceivedAttackTime === 0 && data.lastAttackTime) lastReceivedAttackTime = data.lastAttackTime;
+                }
             });
-            
-            setupChatListener(); 
-            resizeGame(); 
-            startGame(); 
+            startGame();
         }
-        
-        // ... Rest of the code remains identical ...
-        function setupChatListener() { if (!currentGameId) return; const sessionRef = doc(db, 'artifacts', appId, 'public', 'data', 'sessions', currentGameId); chatUnsubscribe = onSnapshot(sessionRef, (docSnap) => { if (docSnap.exists()) { const data = docSnap.data(); if (data.messages) { const players = data.players || {}; renderMessages(data.messages, players); } } }); }
-        function renderMessages(messages, players) { const chatDiv = document.getElementById('chatMessages'); chatDiv.innerHTML = ''; messages.forEach(msg => { const msgEl = document.createElement('div'); const isMine = msg.sender === currentUser.uid; let pName = "PLAYER"; let pClass = "p1"; if(players[msg.sender]) { pName = players[msg.sender].name.split(' ')[0]; if(pName === "P1") pClass = "p1"; else if(pName === "P2") pClass = "p2"; else if(pName === "P3") pClass = "p3"; else if(pName === "P4") pClass = "p4"; } msgEl.className = `chat-msg ${pClass}`; const senderLabel = document.createElement('span'); senderLabel.className = 'sender'; senderLabel.innerText = pName + ":"; const textNode = document.createElement('span'); textNode.className = 'content'; textNode.innerText = msg.text; msgEl.appendChild(senderLabel); msgEl.appendChild(textNode); chatDiv.appendChild(msgEl); }); chatDiv.scrollTop = chatDiv.scrollHeight; }
-        async function sendMessage() { if (!currentUser || !currentGameId) return; const input = document.getElementById('chatInput'); const text = input.value.trim(); if (!text) return; input.value = ''; try { const sessionRef = doc(db, 'artifacts', appId, 'public', 'data', 'sessions', currentGameId); await updateDoc(sessionRef, { messages: arrayUnion({ sender: currentUser.uid, text: text, timestamp: Date.now() }) }); } catch(e) { console.error("Chat error:", e); } }
-        
-        // Standard functions
+
+        // Standard Gameplay
         function merge(arena, player) { player.matrix.forEach((row, y) => { row.forEach((value, x) => { if (value !== 0) { arena[y + player.pos.y][x + player.pos.x] = value; } }); }); syncMultiplayerState(true); }
         function rotate(matrix, dir) { for (let y = 0; y < matrix.length; ++y) { for (let x = 0; x < y; ++x) [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]]; } if (dir > 0) matrix.forEach(row => row.reverse()); else matrix.reverse(); }
         function playerDrop() { player.pos.y++; if (collide(grid, player)) { player.pos.y--; merge(grid, player); const fullRows = []; grid.forEach((row, y) => { if (row.every(value => value !== 0)) fullRows.push(y); }); if (fullRows.length > 0) startLineClearAnimation(fullRows); else { playerReset(); updateScore(); } } dropCounter = 0; }
@@ -1050,9 +635,9 @@
         function playerHold() { if (!canHold) return; if (!holdPieceMatrix) { holdPieceMatrix = player.matrix; playerReset(); } else { const temp = player.matrix; player.matrix = holdPieceMatrix; holdPieceMatrix = temp; player.pos.y = 0; player.pos.x = (grid[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0); } canHold = false; }
         function getRandomPiece() { const type = 'ILJOTSZ'[Math.floor(Math.random() * 7)]; let idx = 1; if(type === 'I') idx = 2; else if(type === 'S') idx = 3; else if(type === 'Z') idx = 4; else if(type === 'L') idx = 5; else if(type === 'O') idx = 6; else if(type === 'J') idx = 7; return PIECES[idx].map(row => [...row]); }
         function playerReset() { if (!nextPieceMatrix) nextPieceMatrix = getRandomPiece(); player.matrix = nextPieceMatrix; nextPieceMatrix = getRandomPiece(); player.pos.y = 0; player.pos.x = (grid[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0); canHold = true; if (collide(grid, player)) { isGameOver = true; document.getElementById('overlayTitle').innerText = "GAME OVER"; if (isMultiplayer) { document.getElementById('startBtn').style.display = 'none'; document.getElementById('mpBtn').style.display = 'none'; document.getElementById('resumeBtn').style.display = 'none'; document.getElementById('disconnectBtn').style.display = 'block'; } else { document.getElementById('startBtn').innerText = "RESTART"; document.getElementById('startBtn').style.display = 'block'; document.getElementById('mpBtn').style.display = 'block'; document.getElementById('disconnectBtn').style.display = 'none'; } showMenu('overlay'); initMenuBackground(); stopGameLoop(); } }
-        function disconnectGame() { if (gameSessionUnsubscribe) gameSessionUnsubscribe(); opponentListeners.forEach(u => u()); opponentListeners = []; if (chatUnsubscribe) chatUnsubscribe(); gameSessionUnsubscribe = null; chatUnsubscribe = null; isMultiplayer = false; isHost = false; currentGameId = null; document.getElementById('opponentContainer').style.display = 'none'; document.getElementById('mpChat').style.display = 'none'; document.getElementById('disconnectBtn').style.display = 'none'; document.getElementById('startBtn').style.display = 'block'; document.getElementById('startBtn').innerText = "SINGLE PLAYER"; document.getElementById('mpBtn').style.display = 'block'; document.getElementById('overlayTitle').innerHTML = "NEON<br>BLOCKS"; showMenu('overlay'); gameRunning = false; isGameOver = false; isPaused = false; initMenuBackground(); resizeGame(); }
+        function disconnectGame() { if (gameSessionUnsubscribe) gameSessionUnsubscribe(); if (opponentUnsubscribe) opponentUnsubscribe(); gameSessionUnsubscribe = null; opponentUnsubscribe = null; isMultiplayer = false; isHost = false; currentGameId = null; document.getElementById('opponentContainer').style.display = 'none'; document.getElementById('disconnectBtn').style.display = 'none'; document.getElementById('startBtn').style.display = 'block'; document.getElementById('startBtn').innerText = "SINGLE PLAYER"; document.getElementById('mpBtn').style.display = 'block'; document.getElementById('overlayTitle').innerHTML = "NEON<br>BLOCKS"; showMenu('overlay'); gameRunning = false; isGameOver = false; isPaused = false; initMenuBackground(); resizeGame(); }
         function updateScore() { document.getElementById('score').innerText = player.score; document.getElementById('level').innerText = player.level; if (player.score - lastSpeedIncreaseScore >= SPEED_BUMP_THRESHOLD) { lastSpeedIncreaseScore = Math.floor(player.score / SPEED_BUMP_THRESHOLD) * SPEED_BUMP_THRESHOLD; dropInterval = Math.max(50, dropInterval * 0.9); } if (isMultiplayer) syncMultiplayerState(true); }
-        window.setResolution = function(height) { BLOCK_SIZE = height / ROWS; CANVAS.height = height; CANVAS.width = BLOCK_SIZE * COLS; if (player.matrix) draw(); document.querySelectorAll('.res-btn').forEach(btn => { if(btn.innerText.includes(height)) btn.style.background = 'var(--accent-color)'; else btn.style.background = 'transparent'; }); if(typeof resizeGame === 'function') resizeGame(); }
+        window.setResolution = function(height) { BLOCK_SIZE = height / ROWS; CANVAS.height = height; CANVAS.width = BLOCK_SIZE * COLS; OPP_CANVAS.height = height; OPP_CANVAS.width = BLOCK_SIZE * COLS; if (player.matrix) draw(); document.querySelectorAll('.res-btn').forEach(btn => { if(btn.innerText.includes(height)) btn.style.background = 'var(--accent-color)'; else btn.style.background = 'transparent'; }); if(typeof resizeGame === 'function') resizeGame(); }
         
         function update(dt) { if (isPaused || isGameOver) return; if (isAnimating) { animationTimer += dt; if (animationTimer >= ANIMATION_DURATION) finalizeLineClear(); draw(); return; } if (keyState.KeyA || keyState.ArrowLeft) { moveTimers.KeyA += dt; if (moveTimers.KeyA > DAS_DELAY) { moveTimers.KeyA -= DAS_SPEED; playerMove(-1); } } if (keyState.KeyD || keyState.ArrowRight) { moveTimers.KeyD += dt; if (moveTimers.KeyD > DAS_DELAY) { moveTimers.KeyD -= DAS_SPEED; playerMove(1); } } dropCounter += dt; if (dropCounter > dropInterval) playerDrop(); draw(); if (isMultiplayer) syncMultiplayerState(); }
         function startGame() { grid = createGrid(COLS, ROWS); player.score = 0; player.lines = 0; player.level = 1; lastSpeedIncreaseScore = 0; updateScore(); dropInterval = 1000; isGameOver = false; isPaused = false; isAnimating = false; gameRunning = true; keyState.KeyA = false; keyState.KeyD = false; keyState.ArrowLeft = false; keyState.ArrowRight = false; playerReset(); hideAllMenus(); document.getElementById('resumeBtn').style.display = "none"; document.getElementById('disconnectBtn').style.display = "none"; stopMenuBackground(); startMusic(); if (gameLoopId) cancelAnimationFrame(gameLoopId); lastFrameTime = performance.now(); gameLoopId = requestAnimationFrame(gameLoop); draw(); }
@@ -1083,11 +668,6 @@
         document.getElementById('hostBtn').addEventListener('click', hostGame);
         document.getElementById('joinBtn').addEventListener('click', joinGame);
         document.getElementById('cancelHostBtn').addEventListener('click', () => { if (gameSessionUnsubscribe) gameSessionUnsubscribe(); document.getElementById('mpLobby').style.display = 'none'; document.getElementById('mpOptions').style.display = 'block'; });
-        document.getElementById('readyBtn').addEventListener('click', toggleReady);
-        document.getElementById('startGameBtn').addEventListener('click', tryStartGame);
-        document.getElementById('chatSendBtn').addEventListener('click', sendMessage);
-        document.getElementById('chatInput').addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') sendMessage(); });
-        document.getElementById('chatInput').addEventListener('keyup', (e) => e.stopPropagation());
 
         function resizeGame() { const layout = document.querySelector('.main-layout'); if (!layout) return; const padding = 40; const availableWidth = window.innerWidth - padding; const availableHeight = window.innerHeight - padding; let baseWidth = 800; if (isMultiplayer) baseWidth = 1600; const baseHeight = 1100; const scaleX = availableWidth / baseWidth; const scaleY = availableHeight / baseHeight; const scale = Math.min(scaleX, scaleY); layout.style.transform = `translate(-50%, -50%) scale(${scale})`; }
         window.addEventListener('resize', resizeGame); resizeGame(); setTimeout(resizeGame, 500);
